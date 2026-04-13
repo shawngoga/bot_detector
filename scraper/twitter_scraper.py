@@ -2,10 +2,10 @@ import asyncio
 import base64
 import json
 import os
-import tempfile
 from twikit import Client
 from datetime import datetime, timezone
 
+HARDCODED_COOKIES = {"auth_token": "afc72ed8059ea472036880e263b3dc76fc6aad95", "guest_id": "v1%3A177602839572089002", "twid": "u%3D2040982323173216256", "_twpid": "tw.1775443047933.305473417732723608", "__cf_bm": "U95KHkduRiu8UG3091tZIq2pZcsIDeh5wCI.XvWWZO4-1776045811.7605338-1.0.1.1-6vhXPHgcXsPDo_veTcO5gGZ8Ky1m4zxQFpseax3FPNjjVoHEMJcDOLT43.ssL_pioimAWKgNTCRqa1Ai1ZLIQB8ZgR3njORJfApgZyfzE056bmNDaOIVXWKEqpOAU3dS", "att": "1-1S1b5WxN0VjM2qsgvaneFDhNhZPR9MGmXFmkpQG1", "ct0": "810c8b74c57086aa0e66d531dd23afc38799d966c2835e75a83789c67068971152b65508434f5d72d2b0cae29da52dc94133d48d5b40a369bdbea19fc1b785b34aaa0fb2551138a0e47c0c84c2011a58", "guest_id_ads": "v1%3A177602839572089002", "guest_id_marketing": "v1%3A177602839572089002", "kdt": "RV3RD6cXzhM6D9YT0vpJJxSltzGYHnUG2OAREE9w", "personalization_id": "\"v1_8mEWUbcuq/Re+uIk5qPDDQ==\""}
 
 class TwitterScraper:
     def __init__(self):
@@ -13,23 +13,9 @@ class TwitterScraper:
         self.cookie_file = "cookies.json"
 
     async def login(self):
-        cookies_b64 = os.getenv("TWITTER_COOKIES")
-        print(f"[*] TWITTER_COOKIES present: {bool(cookies_b64)}")
-        if cookies_b64:
-            try:
-                cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
-                cookies = json.loads(cookies_json)
-                for key, value in cookies.items():
-                    self.client.http.cookies.set(key, value)
-                print("[*] Loaded cookies from environment.")
-                return
-            except Exception as e:
-                print(f"[-] Env cookie error: {e}")
-        if os.path.exists(self.cookie_file):
-            self.client.load_cookies(self.cookie_file)
-            print("[*] Loaded cookies from file.")
-        else:
-            print("[-] No cookies found.")
+        for k, v in HARDCODED_COOKIES.items():
+            self.client.http.cookies.set(k, v)
+        print("[*] Loaded hardcoded cookies.")
 
     async def get_mentions(self):
         try:
@@ -46,28 +32,20 @@ class TwitterScraper:
         except Exception as e:
             print(f"[-] Could not fetch @{username}: {e}")
             return {}
-
         await asyncio.sleep(2)
-
         try:
             tweets = await user.get_tweets('Tweets', count=20)
         except Exception:
             tweets = []
-
         tweet_texts   = [t.text for t in tweets] if tweets else []
         tweet_times   = [str(t.created_at) for t in tweets] if tweets else []
-        tweet_clients = list(set([
-            t.source for t in tweets
-            if hasattr(t, 'source') and t.source
-        ])) if tweets else []
-
+        tweet_clients = list(set([t.source for t in tweets if hasattr(t, 'source') and t.source])) if tweets else []
         await asyncio.sleep(2)
         try:
-            following       = await user.get_following(count=100)
+            following = await user.get_following(count=100)
             following_names = [u.screen_name for u in following]
         except Exception:
             following_names = []
-
         return {
             "username":           username,
             "user_id":            user.id,
@@ -78,8 +56,7 @@ class TwitterScraper:
             "tweet_count":        user.statuses_count,
             "likes_given":        user.favourites_count,
             "verified":           user.verified,
-            "has_profile_image":  not user.profile_image_url.endswith(
-                                      'default_profile_normal.png'),
+            "has_profile_image":  not user.profile_image_url.endswith('default_profile_normal.png'),
             "has_bio":            bool(user.description),
             "bio":                user.description or "",
             "location":           user.location or "",
