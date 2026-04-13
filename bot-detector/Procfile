@@ -1,1 +1,1 @@
-worker: /usr/local/bin/python3.11 main.py
+worker: /usr/local/bin/python3.11 bot-detector/main.py
