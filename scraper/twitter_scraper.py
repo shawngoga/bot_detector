@@ -1,11 +1,12 @@
 import asyncio
-import base64
 import json
 import os
 from twikit import Client
 from datetime import datetime, timezone
 
-HARDCODED_COOKIES = {"auth_token": "afc72ed8059ea472036880e263b3dc76fc6aad95", "guest_id": "v1%3A177602839572089002", "twid": "u%3D2040982323173216256", "_twpid": "tw.1775443047933.305473417732723608", "__cf_bm": "U95KHkduRiu8UG3091tZIq2pZcsIDeh5wCI.XvWWZO4-1776045811.7605338-1.0.1.1-6vhXPHgcXsPDo_veTcO5gGZ8Ky1m4zxQFpseax3FPNjjVoHEMJcDOLT43.ssL_pioimAWKgNTCRqa1Ai1ZLIQB8ZgR3njORJfApgZyfzE056bmNDaOIVXWKEqpOAU3dS", "att": "1-1S1b5WxN0VjM2qsgvaneFDhNhZPR9MGmXFmkpQG1", "ct0": "810c8b74c57086aa0e66d531dd23afc38799d966c2835e75a83789c67068971152b65508434f5d72d2b0cae29da52dc94133d48d5b40a369bdbea19fc1b785b34aaa0fb2551138a0e47c0c84c2011a58", "guest_id_ads": "v1%3A177602839572089002", "guest_id_marketing": "v1%3A177602839572089002", "kdt": "RV3RD6cXzhM6D9YT0vpJJxSltzGYHnUG2OAREE9w", "personalization_id": "\"v1_8mEWUbcuq/Re+uIk5qPDDQ==\""}
+HARDCODED_COOKIES = {"auth_token": "afc72ed8059ea472036880e263b3dc76fc6aad95", "guest_id": "v1%3A177602839572089002", "twid": "u%3D2040982323173216256", "_twpid": "tw.1775443047933.305473417732723608", "att": "1-1S1b5WxN0VjM2qsgvaneFDhNhZPR9MGmXFmkpQG1", "ct0": "810c8b74c57086aa0e66d531dd23afc38799d966c2835e75a83789c67068971152b65508434f5d72d2b0cae29da52dc94133d48d5b40a369bdbea19fc1b785b34aaa0fb2551138a0e47c0c84c2011a58", "guest_id_ads": "v1%3A177602839572089002", "guest_id_marketing": "v1%3A177602839572089002", "kdt": "RV3RD6cXzhM6D9YT0vpJJxSltzGYHnUG2OAREE9w", "personalization_id": "\"v1_8mEWUbcuq/Re+uIk5qPDDQ==\""}
+
+BOT_USERNAME = "bot_Detector_UC"
 
 class TwitterScraper:
     def __init__(self):
@@ -19,8 +20,13 @@ class TwitterScraper:
 
     async def get_mentions(self):
         try:
-            notifications = await self.client.get_notifications('Mentions')
-            return notifications
+            tweets = await self.client.get_latest_timeline()
+            mentions = [
+                t for t in tweets
+                if f"@{BOT_USERNAME}".lower() in t.text.lower()
+            ]
+            print(f"[*] Found {len(mentions)} mentions in timeline")
+            return mentions
         except Exception as e:
             print(f"[-] Error fetching mentions: {e}")
             return []
