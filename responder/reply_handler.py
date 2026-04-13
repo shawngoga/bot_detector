@@ -1,6 +1,4 @@
 def format_reply(username: str, result: dict) -> str:
-    """Format bot detection result as a tweet reply."""
-
     category_labels = {
         "engagement_bot": "🤖 Engagement Bot",
         "influence_bot":  "🎭 Influence Bot",
@@ -23,7 +21,6 @@ def format_reply(username: str, result: dict) -> str:
         f"🔍 Signals: {', '.join(signals)}"
     )
 
-    # Twitter has a 280 character limit
     if len(reply) > 280:
         reply = reply[:277] + "..."
 
@@ -31,7 +28,6 @@ def format_reply(username: str, result: dict) -> str:
 
 
 async def post_reply(client, reply_text: str, mention_id: str):
-    """Post the reply tweet."""
     try:
         await client.create_tweet(
             text=reply_text,

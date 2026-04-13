@@ -13,14 +13,14 @@ from responder.reply_handler import format_reply, post_reply
 
 load_dotenv()
 
-# ── Supabase client ──────────────────────────
+
 def get_supabase():
     return create_client(
         os.getenv("SUPABASE_URL"),
         os.getenv("SUPABASE_KEY")
     )
 
-# ── Save full analysis to Supabase ───────────
+
 def save_analysis(profile: dict, features: dict, result: dict):
     supabase = get_supabase()
     try:
@@ -56,7 +56,6 @@ def save_analysis(profile: dict, features: dict, result: dict):
         print(f"[-] Failed to save analysis: {e}")
 
 
-# ── Full pipeline for one mention ────────────
 async def process_mention(scraper: TwitterScraper, mention):
     username   = mention.user.screen_name
     mention_id = mention.id
@@ -65,72 +64,59 @@ async def process_mention(scraper: TwitterScraper, mention):
     print(f"[+] Analyzing @{username}")
     print(f"{'='*50}")
 
-    # 1. Scrape
     profile = await scraper.get_user_profile(username)
     if not profile:
         print(f"[-] Could not fetch profile for @{username}")
         return
 
-    # 2. Extract features
     features = extract_features(profile)
-    print(f"[+] Features extracted — "
-          f"age={features.get('account_age_days')}d | "
+    print(f"[+] Features: age={features.get('account_age_days')}d | "
           f"tweets/day={features.get('tweets_per_day')} | "
           f"ratio={features.get('follower_ratio')}")
 
-    # 3. Rule-based pre-score
-    hints = rule_based_prescore(profile, features)
-    print(f"[+] Pre-score hints: {hints if hints else 'none'}")
+    hints  = rule_based_prescore(profile, features)
+    print(f"[+] Hints: {hints if hints else 'none'}")
 
-    # 4. Claude classification
     result = analyze_account(profile, features, hints)
-    print(f"[+] Claude result: {result.get('category')} "
-          f"({int(result.get('confidence', 0) * 100)}% confidence)")
+    print(f"[+] Claude: {result.get('category')} "
+          f"({int(result.get('confidence', 0) * 100)}%)")
 
-    # 5. Save to Supabase
     save_analysis(profile, features, result)
-
-    # 6. Build network edges
     build_edges_from_profile(profile, result.get("category"))
 
-    # 7. Attribution report
     attribution = generate_attribution_report(
         profile=profile,
         features=features,
         claude_result=result,
         botnet_members=[]
     )
-    print(f"[+] Attribution: timezone={attribution.get('inferred_timezone')} | "
+    print(f"[+] Attribution: tz={attribution.get('inferred_timezone')} | "
           f"origin={attribution.get('likely_origin')} | "
           f"skill={attribution.get('operator_skill')}")
 
-    # 8. Format and post reply
     reply_text = format_reply(username, result)
     print(f"[+] Reply:\n{reply_text}")
     await post_reply(scraper.client, reply_text, mention_id)
 
-    # 9. Run cluster detection every 10 analyses
-    supabase   = get_supabase()
-    count      = supabase.table("bot_analyses").select("id", count="exact").execute()
-    total      = count.count or 0
+    supabase = get_supabase()
+    count    = supabase.table("bot_analyses").select("id", count="exact").execute()
+    total    = count.count or 0
     if total % 10 == 0 and total > 0:
-        print(f"\n[*] Running cluster detection ({total} accounts analyzed)...")
+        print(f"[*] Running cluster detection ({total} analyzed)...")
         detect_clusters()
 
 
-# ── Main polling loop ────────────────────────
 async def main():
-    scraper     = TwitterScraper()
-    seen_ids    = set()
+    scraper  = TwitterScraper()
+    seen_ids = set()
 
     await scraper.login()
-    print("[*] Bot detector running. Polling for mentions every "
+    print(f"[*] Bot detector running. Polling every "
           f"{os.getenv('POLL_INTERVAL', 60)}s...")
 
     while True:
         try:
             mentions = await scraper.get_mentions()
-
             if not mentions:
                 print("[*] No new mentions.")
             else:
@@ -138,7 +124,6 @@ async def main():
                     if mention.id not in seen_ids:
                         seen_ids.add(mention.id)
                         await process_mention(scraper, mention)
-
         except Exception as e:
             print(f"[-] Polling error: {e}")
 

@@ -1,8 +1,4 @@
 def rule_based_prescore(profile: dict, features: dict) -> list:
-    """
-    Generates hint signals for each category before Claude analyzes.
-    These guide Claude without overriding it.
-    """
     hints = []
 
     # --- Utility bot (check first to avoid false positives) ---

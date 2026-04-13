@@ -6,6 +6,7 @@ import tempfile
 from twikit import Client
 from datetime import datetime, timezone
 
+
 class TwitterScraper:
     def __init__(self):
         self.client = Client('en-US')
@@ -17,7 +18,9 @@ class TwitterScraper:
         if cookies_b64:
             try:
                 cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                with tempfile.NamedTemporaryFile(
+                    mode='w', suffix='.json', delete=False
+                ) as f:
                     f.write(cookies_json)
                     temp_path = f.name
                 self.client.load_cookies(temp_path)

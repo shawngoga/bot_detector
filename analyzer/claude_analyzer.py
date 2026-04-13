@@ -1,6 +1,6 @@
 import json
-import anthropic
 import os
+import anthropic
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -39,8 +39,6 @@ RULES:
 
 
 def analyze_account(profile: dict, features: dict, hints: list) -> dict:
-    """Send account data to Claude for classification."""
-
     user_prompt = f"""Analyze this Twitter/X account for bot behavior.
 
 PROFILE DATA:
@@ -79,16 +77,15 @@ Classify this account. Return ONLY this JSON:
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        # Strip markdown fences if Claude added them
         clean = raw.replace("```json", "").replace("```", "").strip()
         try:
             return json.loads(clean)
         except json.JSONDecodeError:
             return {
-                "category": "unknown",
-                "confidence": 0.0,
+                "category":        "unknown",
+                "confidence":      0.0,
                 "primary_signals": ["Parse error"],
-                "reasoning": raw,
-                "verdict": "Analysis could not be completed.",
+                "reasoning":       raw,
+                "verdict":         "Analysis could not be completed.",
                 "attribution_hints": {}
             }

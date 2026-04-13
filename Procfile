@@ -1,1 +1,1 @@
-worker: python bot-detector/main.py
+worker: python main.py
