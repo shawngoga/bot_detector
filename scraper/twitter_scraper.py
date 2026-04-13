@@ -13,23 +13,23 @@ class TwitterScraper:
         self.cookie_file = "cookies.json"
 
     async def login(self):
-    cookies_b64 = os.getenv("TWITTER_COOKIES")
-    print(f"[*] TWITTER_COOKIES present: {bool(cookies_b64)}")
-    if cookies_b64:
-        try:
-            cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
-            cookies = json.loads(cookies_json)
-            for key, value in cookies.items():
-                self.client.http.cookies.set(key, value)
-            print("[*] Loaded cookies from environment.")
-            return
-        except Exception as e:
-            print(f"[-] Env cookie error: {e}")
-    if os.path.exists(self.cookie_file):
-        self.client.load_cookies(self.cookie_file)
-        print("[*] Loaded cookies from file.")
-    else:
-        print("[-] No cookies found.")
+        cookies_b64 = os.getenv("TWITTER_COOKIES")
+        print(f"[*] TWITTER_COOKIES present: {bool(cookies_b64)}")
+        if cookies_b64:
+            try:
+                cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
+                cookies = json.loads(cookies_json)
+                for key, value in cookies.items():
+                    self.client.http.cookies.set(key, value)
+                print("[*] Loaded cookies from environment.")
+                return
+            except Exception as e:
+                print(f"[-] Env cookie error: {e}")
+        if os.path.exists(self.cookie_file):
+            self.client.load_cookies(self.cookie_file)
+            print("[*] Loaded cookies from file.")
+        else:
+            print("[-] No cookies found.")
 
     async def get_mentions(self):
         try:
