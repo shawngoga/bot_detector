@@ -1,0 +1,233 @@
+# Bot Detector — X/Twitter Bot Detection & Attribution System
+
+A cybersecurity research tool that detects and classifies malicious bots on X (Twitter) using scraping, machine learning, and Claude AI. Built for academic research purposes.
+
+## What It Does
+
+1. **Monitors** your X account for @mentions
+2. **Scrapes** the mentioning account's public profile data
+3. **Classifies** the account into one of 6 categories using Claude AI
+4. **Maps** connections between bot accounts to identify botnets
+5. **Attributes** bot operations to likely operators using OSINT signals
+6. **Replies** to the mention with the analysis result
+
+## Bot Categories
+
+| Category | Description |
+|---|---|
+| `engagement_bot` | Swarm-liking, automated bookmarking, reply loops to game X's algorithm |
+| `influence_bot` | Coordinated Inauthentic Behavior, astroturfing, narrative pushing |
+| `scam_bot` | Phishing, crypto scams, PII harvesting |
+| `cyborg` | Human + automation hybrid, hardest to detect |
+| `utility_bot` | Legitimate automated accounts (weather bots, news feeds) |
+| `human` | Authentic individual user |
+
+## System Architecture
+
+```
+Your Code (Mac) → GitHub → Railway (runs 24/7)
+                                ↓
+                    Polls for @mentions every 60s
+                                ↓
+                    Scrapes target account (twikit)
+                                ↓
+                    Extracts features + rule-based hints
+                                ↓
+                    Claude AI classifies account
+                                ↓
+                    Saves results to Supabase
+                                ↓
+                    Builds network graph of bot connections
+                                ↓
+                    Generates attribution report
+                                ↓
+                    Posts reply tweet with result
+
+Supabase (database) ← stores all analyses, edges, botnets, attribution
+Kaggle Notebook ← pulls from Supabase, visualizes botnet clusters
+```
+
+## Prerequisites
+
+- Python 3.11+
+- A throwaway X/Twitter account
+- Anthropic API account (platform.anthropic.com)
+- Supabase account (supabase.com)
+- Railway account (railway.app)
+- GitHub account
+
+## Installation
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/shawngoga/bot_detector.git
+cd bot_detector/bot-detector
+```
+
+### 2. Install Python 3.11 (if not already installed)
+
+```bash
+# Mac (using Homebrew)
+brew install python@3.11
+
+# Install pip
+/usr/local/bin/python3.11 -m ensurepip --upgrade
+```
+
+### 3. Install dependencies
+
+```bash
+/usr/local/bin/python3.11 -m pip install twikit==2.1.3 anthropic supabase python-dotenv networkx pandas pyvis
+```
+
+### 4. Set up environment variables
+
+Create a `.env` file in the `bot-detector` directory:
+
+```
+TWITTER_USERNAME=your_throwaway_username
+TWITTER_EMAIL=your_throwaway_email
+TWITTER_PASSWORD=your_throwaway_password
+ANTHROPIC_API_KEY=your_anthropic_key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+POLL_INTERVAL=60
+```
+
+### 5. Set up Supabase database
+
+Go to your Supabase project → SQL Editor → run the SQL in `schema.sql`
+
+### 6. Get Twitter cookies
+
+Because X blocks programmatic logins:
+
+1. Log into your throwaway X account in Chrome
+2. Install the **Cookie-Editor** Chrome extension
+3. Click Cookie-Editor → Export → Copy to clipboard
+4. Create `cookies.json` in the `bot-detector` directory and paste
+5. Convert the format:
+
+```bash
+/usr/local/bin/python3.11 -c "
+import json
+with open('cookies.json', 'r') as f:
+    cookies = json.load(f)
+converted = {c['name']: c['value'] for c in cookies}
+with open('cookies.json', 'w') as f:
+    json.dump(converted, f, indent=2)
+print('Cookies converted')
+"
+```
+
+## Running Locally
+
+```bash
+cd bot-detector
+/usr/local/bin/python3.11 main.py
+```
+
+## Testing
+
+Test the full pipeline against any public account:
+
+```bash
+/usr/local/bin/python3.11 -c "
+import asyncio, os
+from dotenv import load_dotenv
+from scraper.twitter_scraper import TwitterScraper
+from analyzer.feature_extractor import extract_features
+from taxonomy.bot_classifier import rule_based_prescore
+from analyzer.claude_analyzer import analyze_account
+
+load_dotenv()
+
+async def test():
+    scraper = TwitterScraper()
+    scraper.client.load_cookies('cookies.json')
+    profile = await scraper.get_user_profile('twitter')
+    features = extract_features(profile)
+    hints = rule_based_prescore(profile, features)
+    result = analyze_account(profile, features, hints)
+    print(f'Category: {result[\"category\"]} ({int(result[\"confidence\"]*100)}%)')
+    print(f'Verdict: {result[\"verdict\"]}')
+
+asyncio.run(test())
+"
+```
+
+## Deploying to Railway
+
+1. Push code to GitHub
+2. Go to railway.app → New Project → Deploy from GitHub
+3. Select your `bot_detector` repo
+4. Add all environment variables from your `.env` file in Railway dashboard
+5. Railway auto-detects Python and runs `Procfile`
+
+## Network Graph Visualization (Kaggle)
+
+After collecting data, open a Kaggle notebook and run:
+
+```python
+from supabase import create_client
+import networkx as nx
+from pyvis.network import Network
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+edges = supabase.table("account_edges").select("*").execute()
+
+G = nx.Graph()
+for edge in edges.data:
+    G.add_edge(edge["source_username"], edge["target_username"])
+
+communities = list(nx.community.greedy_modularity_communities(G))
+print(f"Found {len(communities)} bot clusters")
+
+net = Network(height="750px", bgcolor="#222222", font_color="white")
+net.from_nx(G)
+net.show("botnet_map.html")
+```
+
+## Project Structure
+
+```
+bot-detector/
+├── main.py                        # Entry point, mention polling loop
+├── config.py                      # Configuration and constants
+├── scraper/
+│   └── twitter_scraper.py         # Twikit-based data collection
+├── analyzer/
+│   ├── feature_extractor.py       # Converts raw data to signals
+│   └── claude_analyzer.py         # Claude AI classification
+├── taxonomy/
+│   └── bot_classifier.py          # Rule-based pre-scoring
+├── network/
+│   └── graph_builder.py           # Botnet cluster detection
+├── attribution/
+│   └── attribution_engine.py      # OSINT operator attribution
+└── responder/
+    └── reply_handler.py           # Posts results as tweet replies
+```
+
+## Attribution Methodology
+
+All attribution uses **public data only** — this is standard OSINT methodology used by academic researchers (Stanford Internet Observatory, etc.):
+
+- **Layer 1**: Timezone inference from posting hour distribution
+- **Layer 2**: Language/operator fingerprinting from tweet content
+- **Layer 3**: Infrastructure clustering (sequential usernames, shared clients, coordinated creation dates)
+- **Layer 4**: Claude AI inference on operator skill, motive, and tools
+
+## Academic Context
+
+This project is built for a cybersecurity course. It does not access private data, does not hack any systems, and operates entirely on publicly available information. The scraping approach mirrors methodologies used by academic bot detection researchers.
+
+## Cost Estimate
+
+| Service | Cost |
+|---|---|
+| Railway | Free ($5 credit/month) |
+| Supabase | Free (500MB) |
+| Anthropic (Claude Haiku) | ~$1-3 for a class project |
+| Kaggle | Free (30hr/week compute) |

@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import json
 import os
 from twikit import Client
 from datetime import datetime, timezone
@@ -9,17 +11,17 @@ class TwitterScraper:
         self.cookie_file = "cookies.json"
 
     async def login(self):
-        if os.path.exists(self.cookie_file):
+        cookies_b64 = os.getenv("TWITTER_COOKIES")
+        if cookies_b64:
+            cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
+            cookies = json.loads(cookies_json)
+            self.client.set_cookies(cookies)
+            print("[*] Loaded cookies from environment.")
+        elif os.path.exists(self.cookie_file):
             self.client.load_cookies(self.cookie_file)
-            print("[*] Loaded existing session.")
+            print("[*] Loaded cookies from file.")
         else:
-            await self.client.login(
-                auth_info_1=os.getenv("TWITTER_USERNAME"),
-                auth_info_2=os.getenv("TWITTER_EMAIL"),
-                password=os.getenv("TWITTER_PASSWORD")
-            )
-            self.client.save_cookies(self.cookie_file)
-            print("[*] Logged in and saved session.")
+            print("[-] No cookies found.")
 
     async def get_mentions(self):
         try:
@@ -68,7 +70,7 @@ class TwitterScraper:
             "tweet_count":        user.statuses_count,
             "likes_given":        user.favourites_count,
             "verified":           user.verified,
-            "has_profile_image":  not user.profile_image_url_https.endswith(
+            "has_profile_image":  not user.profile_image_url.endswith(
                                       'default_profile_normal.png'),
             "has_bio":            bool(user.description),
             "bio":                user.description or "",
