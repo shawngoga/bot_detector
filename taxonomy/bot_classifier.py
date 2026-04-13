@@ -10,6 +10,8 @@ def rule_based_prescore(profile: dict, features: dict) -> list:
     # --- Engagement bot ---
     if features.get("abnormal_like_ratio"):
         hints.append("ENGAGEMENT_BOT: Abnormally high like-to-tweet ratio detected")
+    if features.get("abnormal_reply_ratio"):
+        hints.append("ENGAGEMENT_BOT: Abnormally high reply frequency — possible reply loop bot")
     if features.get("follow_heavy"):
         hints.append("ENGAGEMENT_BOT: Following far more accounts than followers")
     if features.get("is_new_account") and features.get("abnormal_velocity"):
@@ -34,6 +36,8 @@ def rule_based_prescore(profile: dict, features: dict) -> list:
         )
     if features.get("url_heavy") and features.get("is_new_account"):
         hints.append("SCAM_BOT: New account posting high volume of external links")
+    if features.get("url_ratio", 0) > 0.4:
+        hints.append(f"SCAM_BOT: {int(features.get('url_ratio',0)*100)}% of tweets contain external links — primary scam signal")
     if features.get("profile_completeness", 4) < 2 and features.get("tweet_count", 0) > 200:
         hints.append("SCAM_BOT: Highly active account with incomplete profile")
 
