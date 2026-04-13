@@ -1,44 +1,72 @@
 import json
 import os
 import anthropic
+from supabase import create_client
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+def get_supabase():
+    return create_client(
+        os.getenv("SUPABASE_URL"),
+        os.getenv("SUPABASE_KEY")
+    )
+
+def get_corrections() -> str:
+    """Pull past human corrections to use as few-shot examples."""
+    try:
+        supabase = get_supabase()
+        corrections = supabase.table("corrections")\
+            .select("*")\
+            .order("created_at", desc=True)\
+            .limit(10)\
+            .execute()
+        if not corrections.data:
+            return ""
+        lines = ["\nPAST CORRECTIONS (learn from these mistakes):"]
+        for c in corrections.data:
+            lines.append(
+                f"- @{c['username']}: AI said {c['predicted']} "
+                f"but correct was {c['actual']}. "
+                f"Reason: {c.get('reason', 'not specified')}"
+            )
+        return "\n".join(lines)
+    except Exception:
+        return ""
 
 SYSTEM_PROMPT = """You are an expert Twitter/X bot detection researcher for a cybersecurity project.
 You classify accounts into exactly 6 categories:
 
 1. ENGAGEMENT_BOT: Games X's recommendation engine via swarm-liking, automated
-   bookmarking, and reply loops. Operates in coordinated botnets. High like-to-tweet
-   ratio, follows other bots, engages abnormally early on posts.
+   bookmarking, and reply loops. High like-to-tweet ratio, abnormal reply frequency,
+   follows other bots, engages abnormally early on posts.
 
 2. INFLUENCE_BOT: Runs Coordinated Inauthentic Behavior (CIB) campaigns. Repeats
    key phrases to trend, follows predictable narratives, highly active, no nuance
    in views, coordinates with other accounts in timing and messaging.
 
-3. SCAM_BOT: Financial extraction and PII harvesting. Link-heavy posts, targets
-   high-follower reply sections, redirects off-platform, scam keywords, new accounts,
-   impersonates verified users.
+3. SCAM_BOT: Financial extraction and PII harvesting. PRIMARY SIGNAL: abnormally
+   high link sharing (>40% of tweets contain URLs). Also: high reply frequency
+   targeting high-follower accounts, redirects off-platform, scam keywords.
+   Combined high reply ratio + high link ratio = almost certainly SCAM_BOT.
 
 4. CYBORG: Human-operated account augmented with automation. Has genuine history
-   but shows automation bursts. Uses third-party clients, posts at inhuman hours,
-   alternates between nuanced and templated content.
+   but shows automation bursts. Uses third-party clients, posts at inhuman hours.
 
 5. UTILITY_BOT: LEGITIMATE automated account. Transparent about being a bot,
-   serves a public function (weather, news, alerts). Do NOT flag as malicious.
-   Consistent format, broadcast pattern, no manipulation signals.
+   serves a public function. Do NOT flag as malicious.
 
 6. HUMAN: Authentic individual. Natural posting patterns, varied content,
-   genuine engagement, sleep gaps in activity, diverse topics.
+   genuine engagement, sleep gaps in activity.
 
 RULES:
+- High URL ratio (>40%) + high reply ratio (>70%) = SCAM_BOT with high confidence
 - High tweet volume alone does NOT mean malicious
-- Templated content alone does NOT mean malicious
-- Distinguish TRANSPARENT automation (utility) from COVERT automation (malicious)
-- Base confidence on strength and number of signals present
 - Always respond with valid JSON only. No text outside the JSON."""
 
 
 def analyze_account(profile: dict, features: dict, hints: list) -> dict:
+    corrections = get_corrections()
+
     user_prompt = f"""Analyze this Twitter/X account for bot behavior.
 
 PROFILE DATA:
@@ -49,6 +77,7 @@ EXTRACTED FEATURES:
 
 PRE-SCORE HINTS (rule-based signals detected):
 {chr(10).join(hints) if hints else "No strong rule-based signals detected."}
+{corrections}
 
 Classify this account. Return ONLY this JSON:
 {{

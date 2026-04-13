@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .DS_Store
 bot_detector_ui.html
+README
+bot_detector_ui.html

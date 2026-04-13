@@ -38,6 +38,8 @@ def rule_based_prescore(profile: dict, features: dict) -> list:
         hints.append("SCAM_BOT: New account posting high volume of external links")
     if features.get("url_ratio", 0) > 0.4:
         hints.append(f"SCAM_BOT: {int(features.get('url_ratio',0)*100)}% of tweets contain external links — primary scam signal")
+    if features.get("url_ratio", 0) > 0.4 and features.get("abnormal_reply_ratio"):
+        hints.append("SCAM_BOT: HIGH CONFIDENCE — combines abnormal reply frequency with link-heavy content, classic scam bot signature")
     if features.get("profile_completeness", 4) < 2 and features.get("tweet_count", 0) > 200:
         hints.append("SCAM_BOT: Highly active account with incomplete profile")
 
