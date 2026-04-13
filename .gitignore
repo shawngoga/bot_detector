@@ -3,3 +3,4 @@ cookies.json
 __pycache__/
 *.pyc
 .DS_Store
+bot_detector_ui.html
