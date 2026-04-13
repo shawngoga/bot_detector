@@ -1,0 +1,7 @@
+twikit
+anthropic
+supabase
+python-dotenv
+networkx
+pandas
+pyvis
