@@ -11,17 +11,23 @@ class TwitterScraper:
         self.cookie_file = "cookies.json"
 
     async def login(self):
-        cookies_b64 = os.getenv("TWITTER_COOKIES")
-        if cookies_b64:
-            cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
-            cookies = json.loads(cookies_json)
-            self.client.set_cookies(cookies)
-            print("[*] Loaded cookies from environment.")
-        elif os.path.exists(self.cookie_file):
-            self.client.load_cookies(self.cookie_file)
-            print("[*] Loaded cookies from file.")
-        else:
-            print("[-] No cookies found.")
+    import base64
+    import tempfile
+    cookies_b64 = os.getenv("TWITTER_COOKIES")
+    if cookies_b64:
+        cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
+        # Write to temp file and load it
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            f.write(cookies_json)
+            temp_path = f.name
+        self.client.load_cookies(temp_path)
+        os.unlink(temp_path)
+        print("[*] Loaded cookies from environment.")
+    elif os.path.exists(self.cookie_file):
+        self.client.load_cookies(self.cookie_file)
+        print("[*] Loaded cookies from file.")
+    else:
+        print("[-] No cookies found.")
 
     async def get_mentions(self):
         try:
