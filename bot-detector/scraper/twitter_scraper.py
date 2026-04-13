@@ -9,7 +9,6 @@ class TwitterScraper:
         self.cookie_file = "cookies.json"
 
     async def login(self):
-        """Login once, save cookies, reuse to avoid repeated logins."""
         if os.path.exists(self.cookie_file):
             self.client.load_cookies(self.cookie_file)
             print("[*] Loaded existing session.")
@@ -23,44 +22,38 @@ class TwitterScraper:
             print("[*] Logged in and saved session.")
 
     async def get_mentions(self):
-        """Fetch latest mentions of the bot account."""
         try:
-            notifications = await self.client.get_mentions()
+            notifications = await self.client.get_notifications('Mentions')
             return notifications
         except Exception as e:
             print(f"[-] Error fetching mentions: {e}")
             return []
 
     async def get_user_profile(self, username: str) -> dict:
-        """Fetch all signal data for a target username."""
-        await asyncio.sleep(3)  # Human-like delay
-
+        await asyncio.sleep(3)
         try:
             user = await self.client.get_user_by_screen_name(username)
         except Exception as e:
-            print(f"[-] Could not fetch user @{username}: {e}")
+            print(f"[-] Could not fetch @{username}: {e}")
             return {}
 
         await asyncio.sleep(2)
 
-        # Fetch recent tweets
         try:
-            tweets = await self.client.get_user_tweets(
-                user.id, 'Tweets', count=20
-            )
+            tweets = await user.get_tweets('Tweets', count=20)
         except Exception:
             tweets = []
 
-        tweet_texts  = [t.text for t in tweets] if tweets else []
-        tweet_times  = [str(t.created_at) for t in tweets] if tweets else []
+        tweet_texts   = [t.text for t in tweets] if tweets else []
+        tweet_times   = [str(t.created_at) for t in tweets] if tweets else []
         tweet_clients = list(set([
-            t.source for t in tweets if hasattr(t, 'source') and t.source
+            t.source for t in tweets
+            if hasattr(t, 'source') and t.source
         ])) if tweets else []
 
-        # Fetch following list (for network mapping)
         await asyncio.sleep(2)
         try:
-            following = await self.client.get_user_following(user.id, count=100)
+            following      = await user.get_following(count=100)
             following_names = [u.screen_name for u in following]
         except Exception:
             following_names = []
@@ -75,7 +68,7 @@ class TwitterScraper:
             "tweet_count":        user.statuses_count,
             "likes_given":        user.favourites_count,
             "verified":           user.verified,
-            "has_profile_image":  not user.profile_image_url_https.endswith(
+            "has_profile_image":  not user.profile_image_url.endswith(
                                       'default_profile_normal.png'),
             "has_bio":            bool(user.description),
             "bio":                user.description or "",
