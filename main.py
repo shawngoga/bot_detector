@@ -57,8 +57,8 @@ def save_analysis(profile: dict, features: dict, result: dict):
 
 
 async def process_mention(scraper: TwitterScraper, mention):
-    username   = mention.user.screen_name
-    mention_id = mention.id
+    username   = mention.tweet.user.screen_name
+    mention_id = mention.tweet.id
 
     print(f"\n{'='*50}")
     print(f"[+] Analyzing @{username}")

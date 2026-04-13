@@ -4,7 +4,7 @@ import os
 from twikit import Client
 from datetime import datetime, timezone
 
-HARDCODED_COOKIES = {"auth_token": "afc72ed8059ea472036880e263b3dc76fc6aad95", "guest_id": "v1%3A177602839572089002", "twid": "u%3D2040982323173216256", "_twpid": "tw.1775443047933.305473417732723608", "att": "1-1S1b5WxN0VjM2qsgvaneFDhNhZPR9MGmXFmkpQG1", "ct0": "810c8b74c57086aa0e66d531dd23afc38799d966c2835e75a83789c67068971152b65508434f5d72d2b0cae29da52dc94133d48d5b40a369bdbea19fc1b785b34aaa0fb2551138a0e47c0c84c2011a58", "guest_id_ads": "v1%3A177602839572089002", "guest_id_marketing": "v1%3A177602839572089002", "kdt": "RV3RD6cXzhM6D9YT0vpJJxSltzGYHnUG2OAREE9w", "personalization_id": "\"v1_8mEWUbcuq/Re+uIk5qPDDQ==\""}
+HARDCODED_COOKIES = {"__gpi": "UID=000013c42b769fa3:T=1776049249:RT=1776049592:S=ALNI_MZY9PBAzc0qaaVBkf7rWrELCNxyCA", "auth_token": "f106acfeda916912516895ef12680300d22f0c5d", "guest_id": "v1%3A177604924292046320", "twid": "u%3D1872098217791229952", "__gads": "ID=eb7a978e055dca9b:T=1776049249:RT=1776049592:S=ALNI_MZ_1TuCrpC4hUdnE0XAH7edv1XDiw", "auth_multi": "\"2040982323173216256:afc72ed8059ea472036880e263b3dc76fc6aad95\"", "_twpid": "tw.1775443047933.305473417732723608", "__cf_bm": "A5XEo_SsCjHRuRMQJv5c0UkkbLpxA_Spz3DmQdEIee4-1776049410.858675-1.0.1.1-44egr2fTOK.zVKeAFWWK8M3EqvVeZWMZkZ0Dt8Yf8mzr9STCGg.TtBdu7.Y2XAjUamBgCdAKRb4jd5.NFMNvP4h308QUvwJ6VItQ3GwseA65sIBIOz7e7SANg7vIagqX", "ct0": "e7c1028cbd205277129559dd13de0411cf539ff4651fd929e180f0eb6374fa90b41c64e7cefc4c230a66431344d195780cd6ac4ea87788f4f4bfdd9e68a98e349c5ea2475c26a8288977f6903b3b983a", "dnt": "1", "guest_id_ads": "v1%3A177604924292046320", "guest_id_marketing": "v1%3A177604924292046320", "kdt": "RV3RD6cXzhM6D9YT0vpJJxSltzGYHnUG2OAREE9w", "personalization_id": "\"v1_8mEWUbcuq/Re+uIk5qPDDQ==\""}
 
 BOT_USERNAME = "bot_Detector_UC"
 
@@ -20,13 +20,9 @@ class TwitterScraper:
 
     async def get_mentions(self):
         try:
-            tweets = await self.client.get_latest_timeline()
-            mentions = [
-                t for t in tweets
-                if f"@{BOT_USERNAME}".lower() in t.text.lower()
-            ]
-            print(f"[*] Found {len(mentions)} mentions in timeline")
-            return mentions
+            notifs = await self.client.get_notifications('Mentions')
+            print(f"[*] Got {len(notifs)} mention notifications")
+            return [n for n in notifs if n.tweet is not None]
         except Exception as e:
             print(f"[-] Error fetching mentions: {e}")
             return []
