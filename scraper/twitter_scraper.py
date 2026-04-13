@@ -15,16 +15,14 @@ class TwitterScraper:
     async def login(self):
         cookies_b64 = os.getenv("TWITTER_COOKIES")
         print(f"[*] TWITTER_COOKIES present: {bool(cookies_b64)}")
+        print(f"[*] Length: {len(cookies_b64) if cookies_b64 else 0}")
         if cookies_b64:
             try:
                 cookies_json = base64.b64decode(cookies_b64).decode('utf-8')
-                with tempfile.NamedTemporaryFile(
-                    mode='w', suffix='.json', delete=False
-                ) as f:
-                    f.write(cookies_json)
-                    temp_path = f.name
-                self.client.load_cookies(temp_path)
-                os.unlink(temp_path)
+                cookies = json.loads(cookies_json)
+                # Set cookies directly on the HTTP client
+                for key, value in cookies.items():
+                    self.client.http.cookies.set(key, value)
                 print("[*] Loaded cookies from environment.")
             except Exception as e:
                 print(f"[-] Cookie load error: {e}")
